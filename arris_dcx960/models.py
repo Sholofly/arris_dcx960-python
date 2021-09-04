@@ -2,7 +2,7 @@
 from typing import List
 
 
-class ArrixDCX960Session:
+class ArrisDCX960Session:
     householdId: str
     oespToken: str
     locationId: str
@@ -13,7 +13,7 @@ class ArrixDCX960Session:
         self.locationId = locationId
         self.username = username
 
-class ArrixDCX960PlayingInfo:
+class ArrisDCX960PlayingInfo:
     channelId: str
     title: str
     image: str
@@ -46,7 +46,7 @@ class ArrixDCX960PlayingInfo:
     def setSourceType(self, sourceType):
         self.sourceType = sourceType
 
-class ArrixDCX960Channel:
+class ArrisDCX960Channel:
     serviceId: str
     title: str
     streamImage: str
@@ -60,7 +60,7 @@ class ArrixDCX960Channel:
         self.logoImage = logoImage
         self.channelNumber = channelNumber
 
-class ArrixDCX960RecordingSingle:
+class ArrisDCX960RecordingSingle:
     recording_id: str
     title: str
     image: str
@@ -81,11 +81,11 @@ class ArrixDCX960RecordingSingle:
         self.episode = episode
 
 
-class ArrixDCX960RecordingShow:
+class ArrisDCX960RecordingShow:
     title: str
     media_group_id: str
     image: str
-    children: List[ArrixDCX960RecordingSingle]
+    children: List[ArrisDCX960RecordingSingle]
     episode_count: int
 
     def __init__(self, media_group_id, title, episode_count, image):
@@ -95,6 +95,6 @@ class ArrixDCX960RecordingShow:
         self.episode_count = episode_count
         self.children = []
     
-    def append_child(self, season_recording:ArrixDCX960RecordingSingle):
+    def append_child(self, season_recording:ArrisDCX960RecordingSingle):
         self.children.append(season_recording)
 

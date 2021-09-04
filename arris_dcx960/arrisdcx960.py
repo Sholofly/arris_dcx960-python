@@ -1,4 +1,4 @@
-"""Python client for ArrixDCX960."""
+"""Python client for ArrisDCX960."""
 import json
 from logging import Logger
 import logging
@@ -6,9 +6,9 @@ import paho.mqtt.client as mqtt
 import re
 
 import requests
-from .models import ArrixDCX960Session, ArrixDCX960Channel, ArrixDCX960RecordingSingle, ArrixDCX960RecordingShow
-from .arrisdcx960box import ArrixDCX960Box
-from .exceptions import ArrixDCX960ConnectionError, ArrixDCX960AuthenticationError
+from .models import ArrisDCX960Session, ArrisDCX960Channel, ArrisDCX960RecordingSingle, ArrisDCX960RecordingShow
+from .arrisdcx960box import ArrisDCX960Box
+from .exceptions import ArrisDCX960ConnectionError, ArrisDCX960AuthenticationError
 from .helpers import make_id
 
 from .const import (
@@ -31,11 +31,11 @@ DEFAULT_PORT = 443
 _logger = logging.getLogger(__name__)
 
 class ArrisDCX960:
-    """Main class for handling connections with ArrixDCX960 Settop boxes."""
+    """Main class for handling connections with ArrisDCX960 Settop boxes."""
     logger: Logger
-    session: ArrixDCX960Session
+    session: ArrisDCX960Session
     def __init__(self, username: str, password: str, country_code: str = "nl") -> None:
-        """Initialize connection with ArrixDCX960"""
+        """Initialize connection with ArrisDCX960"""
         self.username = username
         self.password = password
         self.token = None
@@ -54,35 +54,35 @@ class ArrisDCX960:
         self._last_message_stamp = None
 
     def get_session_and_token(self):
-        """Get session and token from ArrixDCX960"""
+        """Get session and token from ArrisDCX960"""
         self.get_session()
         self._get_token()
 
     def get_session(self):
-        """Get ArrixDCX960 Session information"""
+        """Get ArrisDCX960 Session information"""
         if self.country_config["use_oauth"]:
             self.get_oauth_session()
         else:
             self.get_default_session()
 
     def get_default_session(self):
-        """Get ArrixDCX960 Session information"""
+        """Get ArrisDCX960 Session information"""
         payload = {"username": self.username, "password": self.password}
         try:
             response = requests.post(self._api_url_session, json=payload)
         except (Exception):
-            raise ArrixDCX960ConnectionError("Unknown connection failure")
+            raise ArrisDCX960ConnectionError("Unknown connection failure")
 
         if not response.ok:
             status = response.json()
             _logger.debug(status)
             if status[0]['code'] == 'invalidCredentials':
-                raise ArrixDCX960AuthenticationError("Invalid credentials")
-            raise ArrixDCX960ConnectionError("Connection failed: " + status)
+                raise ArrisDCX960AuthenticationError("Invalid credentials")
+            raise ArrisDCX960ConnectionError("Connection failed: " + status)
         else:
             session = response.json()
             _logger.debug(session)
-            self.session = ArrixDCX960Session(
+            self.session = ArrisDCX960Session(
                 session["customer"]["householdId"], session["oespToken"], session["locationId"], session["username"]
             )
     
@@ -95,7 +95,7 @@ class ArrisDCX960:
             response = session.get(self._api_url_authorization)
             _logger.debug("STEP 1 - Response text:  " + str(response.text))
             if not response.ok:
-                raise ArrixDCX960AuthenticationError("Could not get authorizationUri")
+                raise ArrisDCX960AuthenticationError("Could not get authorizationUri")
  
             auth = response.json()
             _logger.debug("STEP 1 - Response: " + str(auth))
@@ -107,7 +107,7 @@ class ArrisDCX960:
             _logger.debug("STEP 2: Get AUTH cookie from: " + authorizationUri)
             response = session.get(authorizationUri)
             if not response.ok:
-                raise ArrixDCX960AuthenticationError("Unable to authorize to get AUTH cookie")
+                raise ArrisDCX960AuthenticationError("Unable to authorize to get AUTH cookie")
 
             _logger.debug("STEP 2 - Response cookies:" + str(session.cookies.get_dict()))
             
@@ -128,7 +128,7 @@ class ArrisDCX960:
             _logger.debug("STEP 3: POST login to " + auth_login_url + " with data: " + str(payload))
             response = session.post(auth_login_url, data=payload, allow_redirects=False, headers=headers)
             if not response.ok:
-                raise ArrixDCX960AuthenticationError("Response: " + str(response.status_code))
+                raise ArrisDCX960AuthenticationError("Response: " + str(response.status_code))
             
             _logger.debug("STEP 3 - Response headers:  " + str(response.headers))
             _logger.debug("STEP 3 - Response text:  " + str(response.text))
@@ -137,13 +137,13 @@ class ArrisDCX960:
             redirect_header_name = self.country_config["oauth_redirect_header"]
             url = response.headers[redirect_header_name]
             if len(re.findall(r"authentication_error=true", url)) > 0:
-                raise ArrixDCX960AuthenticationError("Unable to login, wrong credentials")
+                raise ArrisDCX960AuthenticationError("Unable to login, wrong credentials")
             
             _logger.debug("STEP 4:  Follow redirect " + url)
             response = session.get(url, allow_redirects=False)
             _logger.debug("STEP 4 - Response headers: " + str(response.headers))
             if not response.ok:
-                raise ArrixDCX960AuthenticationError("Unable to oauth authorize")
+                raise ArrisDCX960AuthenticationError("Unable to oauth authorize")
             
             # obtain authorizationCode
             _logger.debug("STEP 5 - Extract authorizationCode")
@@ -151,7 +151,7 @@ class ArrisDCX960:
 
             codeMatches = re.findall(r"code=(.*)&", url)
             if not len(codeMatches) == 1:
-                raise ArrixDCX960AuthenticationError("Unable to obtain authorizationCode")
+                raise ArrisDCX960AuthenticationError("Unable to obtain authorizationCode")
 
             authorizationCode = codeMatches[0]
             _logger.debug("STEP 5 - authorizationCode: " + authorizationCode)
@@ -162,7 +162,7 @@ class ArrisDCX960:
             _logger.debug("STEP 6 - using payload: " + str(payload))
             response = session.post(self._api_url_authorization, json=payload)
             if not response.ok:
-                raise ArrixDCX960AuthenticationError("Unable to authorize with oauth code")
+                raise ArrisDCX960AuthenticationError("Unable to authorize with oauth code")
                 
             _logger.debug("STEP 6 - Response: " + str(response.text))
             auth = response.json()
@@ -177,18 +177,18 @@ class ArrisDCX960:
 
         except Exception as e:
             _logger.debug("Generic exception: " + str(e))
-            raise ArrixDCX960ConnectionError("Unknown connection failure: " + str(e))
+            raise ArrisDCX960ConnectionError("Unknown connection failure: " + str(e))
 
         if not response.ok:
             status = response.json()
             _logger.debug(status)
             code = status[0].code
             reason = status[0].reason
-            raise ArrixDCX960AuthenticationError("Invalid authorization response - " + code + ": " + reason)
+            raise ArrisDCX960AuthenticationError("Invalid authorization response - " + code + ": " + reason)
         
         session = response.json()
         _logger.debug(session)
-        self.session = ArrixDCX960Session(
+        self.session = ArrisDCX960Session(
             session["customer"]["householdId"], session["oespToken"], session["locationId"], session["username"]
         )
     
@@ -198,7 +198,7 @@ class ArrisDCX960:
         for box in jsonResult:
             if box["platformType"] == "EOS" or box["platformType"] == "HORIZON":
                 box_id = box["deviceId"]
-                self.settop_boxes[box_id] = ArrixDCX960Box(box_id, box["settings"]["deviceFriendlyName"], self.session.householdId, self.token, self._country_code, self.mqttClient, self.mqttClientId)
+                self.settop_boxes[box_id] = ArrisDCX960Box(box_id, box["settings"]["deviceFriendlyName"], self.session.householdId, self.token, self._country_code, self.mqttClient, self.mqttClientId)
 
     def _on_mqtt_client_connect(self, client, userdata, flags, resultCode):
         """Handling mqtt connect result"""
@@ -247,7 +247,7 @@ class ArrisDCX960:
         """Executes api call and returns json object"""
         _logger.debug(f'Doing API call with url: {url}')
         if tries > 3:
-            raise ArrixDCX960ConnectionError("API call failed. See previous errors.")
+            raise ArrisDCX960ConnectionError("API call failed. See previous errors.")
         headers = {
             "X-OESP-Token": self.session.oespToken,
             "X-OESP-Username": self.session.username,
@@ -262,16 +262,16 @@ class ArrisDCX960:
             tries+=1
             return self._do_api_call(url, tries)
         else:
-            raise ArrixDCX960ConnectionError("API call failed: " + str(response.status_code))
+            raise ArrisDCX960ConnectionError("API call failed: " + str(response.status_code))
 
     def _get_token(self):
-        """Get token from ArrixDCX960"""
+        """Get token from ArrisDCX960"""
         jsonResult = self._do_api_call(self._api_url_token)
         self.token = jsonResult["token"]
         _logger.debug("Fetched a token: %s", jsonResult)
         
     def connect(self, enableMqttLogging: bool = False):
-        """Get token and start mqtt client for receiving data from ArrixDCX960"""
+        """Get token and start mqtt client for receiving data from ArrisDCX960"""
         self._mqtt_broker = self.country_config["mqtt_url"]
         self.get_session_and_token()
         self._api_url_settop_boxes =  self.country_config["personalization_url_format"].format(household_id=self.session.householdId)
@@ -383,7 +383,7 @@ class ArrisDCX960:
                 streamImage = image["url"]
             if image["assetType"] == "station-logo-small":
                 channelImage =  image["url"]
-        return ArrixDCX960Channel(
+        return ArrisDCX960Channel(
                 serviceId,
                 channel_data["title"],
                 streamImage,
@@ -402,7 +402,7 @@ class ArrisDCX960:
 
         for channel in self.country_config["channels"]:
 
-            self.channels[channel["channelId"]] = ArrixDCX960Channel(
+            self.channels[channel["channelId"]] = ArrisDCX960Channel(
                 channel["channelId"],
                 channel["channelName"],
                 None,
@@ -442,7 +442,7 @@ class ArrisDCX960:
         if len(payload["images"]) > 0:
             image = payload["images"][0]["url"]
 
-        recording = ArrixDCX960RecordingSingle(payload["recordingId"], payload["title"], image)
+        recording = ArrisDCX960RecordingSingle(payload["recordingId"], payload["title"], image)
         if "seasonNumber" in payload:
             recording.set_season(payload["seasonNumber"])
         else:
@@ -464,7 +464,7 @@ class ArrisDCX960:
         example_recording = recordings[0]
         if "numberOfEpisodes" not in example_recording:
             example_recording["numberOfEpisodes"] = 0
-        show_recording = ArrixDCX960RecordingShow(media_group_id, example_recording["showTitle"], example_recording["numberOfEpisodes"], example_recording["images"][0]["url"])
+        show_recording = ArrisDCX960RecordingShow(media_group_id, example_recording["showTitle"], example_recording["numberOfEpisodes"], example_recording["images"][0]["url"])
         for recording in recordings:
             show_recording.append_child(self._get_single_recording(recording))
         return {
@@ -473,7 +473,7 @@ class ArrisDCX960:
         }
 
     def _get_show_recording_summary(self, recording_payload, group_id):
-        show_recording = ArrixDCX960RecordingShow(recording_payload[group_id], recording_payload["title"],recording_payload["numberOfEpisodes"],  recording_payload["images"][0]["url"])
+        show_recording = ArrisDCX960RecordingShow(recording_payload[group_id], recording_payload["title"],recording_payload["numberOfEpisodes"],  recording_payload["images"][0]["url"])
         return {
             "type": "show",
             "show": show_recording

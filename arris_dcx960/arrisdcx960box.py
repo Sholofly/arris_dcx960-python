@@ -1,9 +1,9 @@
-"""ArrixDCX960Box"""
+"""ArrisDCX960Box"""
 from paho.mqtt.client import Client
 import json
 import requests
 import logging
-from .models import ArrixDCX960PlayingInfo, ArrixDCX960Channel
+from .models import ArrisDCX960PlayingInfo, ArrisDCX960Channel
 from .const import (
     BOX_PLAY_STATE_BUFFER,
     BOX_PLAY_STATE_CHANNEL,
@@ -19,14 +19,14 @@ from .helpers import make_id
 
 DEFAULT_PORT = 443
 _logger = logging.getLogger(__name__)
-class ArrixDCX960Box:
+class ArrisDCX960Box:
     
     box_id: str
     name: str
     state: str = UNKNOWN
-    info: ArrixDCX960PlayingInfo
+    info: ArrisDCX960PlayingInfo
     available: bool = False
-    channels: ArrixDCX960Channel = {}
+    channels: ArrisDCX960Channel = {}
 
     def __init__(self, box_id:str, name:str, householdId:str, token:str, country_code:str, mqttClient:Client, client_id:str):
         self._country_config = COUNTRY_SETTINGS[country_code]
@@ -34,7 +34,7 @@ class ArrixDCX960Box:
         self.name = name
         self._householdId = householdId
         self._token = token
-        self.info = ArrixDCX960PlayingInfo()
+        self.info = ArrisDCX960PlayingInfo()
         self._mqttClientConnected = False
         self._createUrls(country_code)
         self.mqttClientId = client_id
@@ -77,7 +77,7 @@ class ArrixDCX960Box:
         self.state = state
         
         if state == ONLINE_STANDBY :
-            self.info = ArrixDCX960PlayingInfo()
+            self.info = ArrisDCX960PlayingInfo()
             if self._change_callback:
                 _logger.debug(f'Callback called from box {self.box_id}')
                 self._change_callback(self.box_id)
@@ -122,7 +122,7 @@ class ArrixDCX960Box:
             stateSource = playerState["source"]
             speed = playerState["speed"]
             if self.info is None:
-                self.info = ArrixDCX960PlayingInfo()
+                self.info = ArrisDCX960PlayingInfo()
             if sourceType == BOX_PLAY_STATE_REPLAY:
                 self.info.setSourceType(BOX_PLAY_STATE_REPLAY)
                 if stateSource is None or not "eventId" in stateSource:
@@ -318,4 +318,4 @@ class ArrixDCX960Box:
         self.mqttClient.publish(self._householdId + "/" + self.box_id, payload)
     
     def turn_off(self):
-        self.info = ArrixDCX960PlayingInfo()
+        self.info = ArrisDCX960PlayingInfo()
