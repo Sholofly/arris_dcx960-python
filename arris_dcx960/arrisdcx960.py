@@ -195,8 +195,9 @@ class ArrisDCX960:
     def _register_settop_boxes(self):
         """Get settopxes"""
         jsonResult = self._do_api_call(self._api_url_settop_boxes)
+        supported_platforms = ['EOS', 'EOS2', 'HORIZON']
         for box in jsonResult:
-            if box["platformType"] == "EOS" or box["platformType"] == "HORIZON":
+            if box["platformType"] in supported_platforms:
                 box_id = box["deviceId"]
                 self.settop_boxes[box_id] = ArrisDCX960Box(box_id, box["settings"]["deviceFriendlyName"], self.session.householdId, self.token, self._country_code, self.mqttClient, self.mqttClientId)
 

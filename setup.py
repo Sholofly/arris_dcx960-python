@@ -31,7 +31,7 @@ setuptools.setup(
     packages=setuptools.find_packages(include=["arris_dcx960"]),
     license="MIT license",
     install_requires=["paho-mqtt>=1.5.0", "requests>=2.22.0"],
-    keywords=["Arris DCX960", "API", "Aettop box"],
+    keywords=["Arris DCX960", "API", "Settop box"],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Programming Language :: Python :: 3",
