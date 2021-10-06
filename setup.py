@@ -1,3 +1,4 @@
+"""Set up Arris DCX960."""
 import setuptools
 import os
 import re
@@ -6,11 +7,13 @@ import sys
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+
 def get_version():
     """Get current version from code."""
     regex = r"__version__\s=\s\"(?P<version>[\d\.]+?)\""
     path = ("arris_dcx960", "__version__.py")
     return re.search(regex, read(*path)).group("version")
+
 
 def read(*parts):
     """Read file."""
@@ -18,6 +21,7 @@ def read(*parts):
     sys.stdout.write(filename)
     with open(filename, encoding="utf-8", mode="rt") as fp:
         return fp.read()
+
 
 setuptools.setup(
     name="arris_dcx960",
@@ -44,7 +48,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    python_requires='>=3.6',
+    python_requires=">=3.6",
     zip_safe=False,
     include_package_data=True,
 )
