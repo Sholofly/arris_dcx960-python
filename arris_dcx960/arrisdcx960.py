@@ -266,8 +266,8 @@ class ArrisDCX960:
                     self.session.householdId,
                     self.token,
                     self._country_code,
-                    self.mqttClient,
-                    self.mqttClientId,
+                    self.mqtt_client,
+                    self.mqtt_client_id,
                 )
 
     def _on_mqtt_client_connect(self, client, userdata, flags, resultCode):
@@ -275,9 +275,9 @@ class ArrisDCX960:
         if resultCode == 0:
             client.on_message = self._on_mqtt_client_message
             _logger.debug("Connected to mqtt client.")
-            self.mqttClientConnected = True
+            self.mqtt_clientConnected = True
             client.subscribe(self.session.householdId)
-            client.subscribe(self.session.householdId + "/" + self.mqttClientId)
+            client.subscribe(self.session.householdId + "/" + self.mqtt_client_id)
             client.subscribe(self.session.householdId + "/+/status")
             client.subscribe(self.session.householdId + "/+/localRecordings")
             client.subscribe(self.session.householdId + "/+/localRecordings/capacity")
@@ -302,7 +302,7 @@ class ArrisDCX960:
     def _on_mqtt_client_disconnect(self, client, userdata, resultCode):
         """Set state to diconnect."""
         _logger.debug(f"Disconnected from mqtt client: {resultCode}")
-        self.mqttClientConnected = False
+        self.mqtt_clientConnected = False
 
     def _on_mqtt_client_message(self, client, userdata, message):
         """Handle messages received by mqtt client."""
@@ -350,23 +350,27 @@ class ArrisDCX960:
 
     def connect(self, enableMqttLogging: bool = False):
         """Get token and start mqtt client for receiving data from ArrisDCX960."""
-        self._mqtt_broker = self.country_config["mqtt_url"]
         self.get_session_and_token()
         self._api_url_settop_boxes = self.country_config[
             "personalization_url_format"
         ].format(household_id=self.session.householdId)
-        self.mqttClientId = make_id(30)
-        self.mqttClient = mqtt.Client(self.mqttClientId, transport="websockets")
-        if enableMqttLogging:
-            self.mqttClient.enable_logger(_logger)
-        self.mqttClient.username_pw_set(self.session.householdId, self.token)
-        self.mqttClient.tls_set()
-        self.mqttClient.on_connect = self._on_mqtt_client_connect
-        self.mqttClient.on_disconnect = self._on_mqtt_client_disconnect
-        self.mqttClient.connect(self._mqtt_broker, DEFAULT_PORT)
+        self._init_mqtt_client(enableMqttLogging)
+        self.mqtt_client.connect(self._mqtt_broker, DEFAULT_PORT)
         self._register_settop_boxes()
-        self.load_channels()
-        self.mqttClient.loop_start()
+        self._init_channel_list()
+        self.mqtt_client.loop_start()
+
+    def _init_mqtt_client(self, logging: bool):
+        """Create a mqtt client."""
+        self._mqtt_broker = self.country_config["mqtt_url"]
+        self.mqtt_client_id = make_id(30)
+        self.mqtt_client = mqtt.Client(self.mqtt_client_id, transport="websockets")
+        if logging:
+            self.mqtt_client.enable_logger(_logger)
+        self.mqtt_client.username_pw_set(self.session.householdId, self.token)
+        self.mqtt_client.tls_set()
+        self.mqtt_client.on_connect = self._on_mqtt_client_connect
+        self.mqtt_client.on_disconnect = self._on_mqtt_client_disconnect
 
     def _send_key_to_box(self, box_id: str, key: str):
         """Send key to box."""
@@ -375,7 +379,7 @@ class ArrisDCX960:
     def select_source(self, source, box_id):
         """Change te channel from the settopbox."""
         channel = [src for src in self.channels.values() if src.title == source][0]
-        self.settop_boxes[box_id].set_channel(channel.serviceId)
+        self.settop_boxes[box_id].set_channel(channel.service_id)
 
     def pause(self, box_id):
         """Pause the given settopbox."""
@@ -459,28 +463,28 @@ class ArrisDCX960:
     def _create_channel(self, channel_data):
         """Create new channel entity."""
         station = channel_data["stationSchedules"][0]["station"]
-        serviceId = station["serviceId"]
-        streamImage = None
+        service_id = station["serviceId"]
+        stream_image = None
         channelImage = None
         for image in station["images"]:
             if image["assetType"] == "imageStream":
-                streamImage = image["url"]
+                stream_image = image["url"]
             if image["assetType"] == "station-logo-small":
                 channelImage = image["url"]
         return ArrisDCX960Channel(
-            serviceId,
+            service_id,
             channel_data["title"],
-            streamImage,
+            stream_image,
             channelImage,
             channel_data["channelNumber"],
         )
 
-    def load_channels(self):
+    def _init_channel_list(self):
         """Refresh channels list for now-playing data."""
-        _logger.debug("loading channels...")
+        _logger.debug("init channel list.")
         url = (
             f"{self._api_url_channels}"
-            "?byLocationId={self.session.locationId}"
+            f"?byLocationId={self.session.locationId}"
             "&includeInvisible=true"
             "&includeNotEntitled=true"
             "&personalised=true"
@@ -489,7 +493,7 @@ class ArrisDCX960:
         content = self._do_api_call(url)
         for channel_dict in content["channels"]:
             channel = self._create_channel(channel_dict)
-            self.channels[channel.serviceId] = channel
+            self.channels[channel.service_id] = channel
 
         for channel in self.country_config["channels"]:
 
@@ -501,13 +505,6 @@ class ArrisDCX960:
                 channel["channelNumber"],
             )
 
-        # self.channels["NL_000074_019507"] = ZiggoChannel(
-        #     "NL_000074_019507",
-        #     "Videoland",
-        #     None,
-        #     None,
-        #     "151"
-        # )
         for box in self.settop_boxes.values():
             box.channels = self.channels
 
@@ -590,6 +587,6 @@ class ArrisDCX960:
 
     def disconnect(self):
         """Disconnect."""
-        if not self.mqttClientConnected:
+        if not self.mqtt_clientConnected:
             return
-        self.mqttClient.disconnect()
+        self.mqtt_client.disconnect()

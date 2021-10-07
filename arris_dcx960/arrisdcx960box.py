@@ -38,7 +38,7 @@ class ArrisDCX960Box:
         householdId: str,
         token: str,
         country_code: str,
-        mqttClient: Client,
+        mqtt_client: Client,
         client_id: str,
     ):
         """Initialize a single settop box."""
@@ -48,10 +48,10 @@ class ArrisDCX960Box:
         self._householdId = householdId
         self._token = token
         self.info = ArrisDCX960PlayingInfo()
-        self._mqttClientConnected = False
+        self._mqtt_clientConnected = False
         self._createUrls(country_code)
-        self.mqttClientId = client_id
-        self.mqttClient = mqttClient
+        self.mqtt_client_id = client_id
+        self.mqtt_client = mqtt_client
         self._change_callback = None
         self._message_stamp = None
 
@@ -65,12 +65,12 @@ class ArrisDCX960Box:
     def register(self):
         """Register a settop box."""
         payload = {
-            "source": self.mqttClientId,
+            "source": self.mqtt_client_id,
             "state": "ONLINE_RUNNING",
             "deviceType": "HGO",
         }
-        register_topic = self._householdId + "/" + self.mqttClientId + "/status"
-        self.mqttClient.publish(register_topic, json.dumps(payload))
+        register_topic = self._householdId + "/" + self.mqtt_client_id + "/status"
+        self.mqtt_client.publish(register_topic, json.dumps(payload))
 
     def set_callback(self, callback):
         """Set callback function."""
@@ -78,7 +78,7 @@ class ArrisDCX960Box:
 
     def _do_subscribe(self, topic):
         """Subscribe to mqtt topic."""
-        self.mqttClient.subscribe(topic)
+        self.mqtt_client.subscribe(topic)
         _logger.debug("subscribed to topic: {topic}".format(topic=topic))
 
     def update_settopbox_state(self, payload):
@@ -104,9 +104,9 @@ class ArrisDCX960Box:
         payload = {
             "id": make_id(8),
             "type": "CPE.getUiStatus",
-            "source": self.mqttClientId,
+            "source": self.mqtt_client_id,
         }
-        self.mqttClient.publish(topic, json.dumps(payload))
+        self.mqtt_client.publish(topic, json.dumps(payload))
 
     def update_settop_box(self, payload):
         """Update settopbox state."""
@@ -131,102 +131,107 @@ class ArrisDCX960Box:
                     "No sourceType or stateSource in playerState. State update was skipped"
                 )
                 return
-            sourceType = playerState["sourceType"]
-            stateSource = playerState["source"]
+            source_type = playerState["sourceType"]
+            state_source = playerState["source"]
             speed = playerState["speed"]
             if self.info is None:
                 self.info = ArrisDCX960PlayingInfo()
-            if sourceType == BOX_PLAY_STATE_REPLAY:
-                self.info.setSourceType(BOX_PLAY_STATE_REPLAY)
-                if stateSource is None or "eventId" not in stateSource:
+            if source_type == BOX_PLAY_STATE_REPLAY:
+                self.info.set_source_type(BOX_PLAY_STATE_REPLAY)
+                if state_source is None or "eventId" not in state_source:
                     _logger.warning("No eventId in stateSource")
                     _logger.warning("State update was skipped ")
                     return
-                eventId = stateSource["eventId"]
+                eventId = state_source["eventId"]
                 listing = self._get_listing(eventId)
                 channel_id = self._get_listing_channel_id(listing)
                 if channel_id is not None and channel_id in self.channels.keys():
-                    self.info.setChannel(channel_id)
+                    self.info.set_channel(channel_id)
                     channel = self.channels[channel_id]
-                    self.info.setTitle("ReplayTV: " + self._get_listing_title(listing))
-                    self.info.setImage(self._get_listing_image(listing))
+                    self.info.set_title("ReplayTV: " + self._get_listing_title(listing))
+                    self.info.set_image(self._get_listing_image(listing))
                 else:
                     self._set_unknown_channel_info()
-            elif sourceType == BOX_PLAY_STATE_DVR:
-                self.info.setSourceType(BOX_PLAY_STATE_DVR)
-                if stateSource is None or "recordingId" not in stateSource:
+            elif source_type == BOX_PLAY_STATE_DVR:
+                self.info.set_source_type(BOX_PLAY_STATE_DVR)
+                if state_source is None or "recordingId" not in state_source:
                     _logger.warning(
                         "No recordingId in stateSource,State update was skipped."
                     )
                     return
-                recordingId = stateSource["recordingId"]
+                recordingId = state_source["recordingId"]
                 listing = self._get_listing(recordingId)
                 channel_id = self._get_listing_channel_id(listing)
                 if channel_id is not None and channel_id in self.channels.keys():
-                    self.info.setChannel(channel_id)
+                    self.info.set_channel(channel_id)
                     channel = self.channels[channel_id]
-                    self.info.setTitle("Recording: " + self._get_listing_title(listing))
-                    self.info.setImage(self._get_listing_image(listing))
+                    self.info.set_title(
+                        "Recording: " + self._get_listing_title(listing)
+                    )
+                    self.info.set_image(self._get_listing_image(listing))
                 else:
                     self._set_unknown_channel_info()
-            elif sourceType == BOX_PLAY_STATE_BUFFER:
-                self.info.setSourceType(BOX_PLAY_STATE_BUFFER)
-                if stateSource is None or "channelId" not in stateSource:
+            elif source_type == BOX_PLAY_STATE_BUFFER:
+                self.info.set_source_type(BOX_PLAY_STATE_BUFFER)
+                if state_source is None or "channelId" not in state_source:
                     _logger.warning(
                         "No channelId in stateSource. State update was skipped."
                     )
                     return
-                channelId = stateSource["channelId"]
-                if channelId is not None and channelId in self.channels.keys():
-                    self.info.setChannel(channelId)
-                    channel = self.channels[channelId]
-                    self.info.setChannelTitle(channel.title)
-                    eventId = stateSource["eventId"]
+                channel_id = state_source["channelId"]
+                if channel_id is not None and channel_id in self.channels.keys():
+                    self.info.set_channel(channel_id)
+                    channel = self.channels[channel_id]
+                    self.info.set_channel_title(channel.title)
+                    eventId = state_source["eventId"]
                     listing = self._get_listing(eventId)
-                    self.info.setTitle("Delayed: " + self._get_listing_title(listing))
-                    self.info.setImage(channel.streamImage)
+                    self.info.set_title("Delayed: " + self._get_listing_title(listing))
+                    self.info.set_image(channel.stream_image)
                 else:
                     self._set_unknown_channel_info()
-            elif sourceType == BOX_PLAY_STATE_CHANNEL:
-                self.info.setSourceType(BOX_PLAY_STATE_CHANNEL)
-                if stateSource is None or "channelId" not in stateSource:
+            elif source_type == BOX_PLAY_STATE_CHANNEL:
+                self.info.set_source_type(BOX_PLAY_STATE_CHANNEL)
+                if state_source is None or "channelId" not in state_source:
                     _logger.warning(
-                        "No channelId in stateSource. State update was skipped."
+                        "No channelId in state_source. State update was skipped."
                     )
                     return
-                channelId = stateSource["channelId"]
-                eventId = stateSource["eventId"]
-                if channelId is not None and channelId in self.channels.keys():
-                    channel = self.channels[channelId]
+                channel_id = state_source["channelId"]
+                eventId = state_source["eventId"]
+                if channel_id is not None and channel_id in self.channels.keys():
+                    channel = self.channels[channel_id]
                     listing = self._get_listing(eventId)
-                    self.info.setChannel(channelId)
-                    self.info.setChannelTitle(channel.title)
-                    self.info.setTitle(self._get_listing_title(listing))
-                    self.info.setImage(channel.streamImage)
+                    self.info.set_channel(channel_id)
+                    self.info.set_channel_title(channel.title)
+                    self.info.set_title(self._get_listing_title(listing))
+                    self.info.set_image(channel.stream_image)
                 else:
+                    _logger.debug(
+                        f"channelId {channel_id} not in channelsList: {self.channels.keys()}"
+                    )
                     self._set_unknown_channel_info()
-            elif sourceType == BOX_PLAY_STATE_VOD:
-                self.info.setSourceType(BOX_PLAY_STATE_VOD)
-                title_id = stateSource["titleId"]
+            elif source_type == BOX_PLAY_STATE_VOD:
+                self.info.set_source_type(BOX_PLAY_STATE_VOD)
+                title_id = state_source["titleId"]
                 mediagroup_content = self._get_mediagroup(title_id)
-                self.info.setChannel(None)
-                self.info.setChannelTitle("VOD")
-                self.info.setTitle(self._get_mediagroup_title(mediagroup_content))
-                self.info.setImage(self._get_mediagroup_image(mediagroup_content))
+                self.info.set_channel(None)
+                self.info.set_channel_title("VOD")
+                self.info.set_title(self._get_mediagroup_title(mediagroup_content))
+                self.info.set_image(self._get_mediagroup_image(mediagroup_content))
             else:
                 self._set_unknown_channel_info()
-            self.info.setPaused(speed == 0)
+            self.info.set_paused(speed == 0)
         elif uiStatus == "apps":
             appsState = statusPayload["appsState"]
             logoPath = appsState["logoPath"]
             if not logoPath.startswith("http:"):
                 logoPath = "https:" + logoPath
-            self.info.setSourceType(BOX_PLAY_STATE_APP)
-            self.info.setChannel(None)
-            self.info.setChannelTitle(appsState["appName"])
-            self.info.setTitle(appsState["appName"])
-            self.info.setImage(logoPath)
-            self.info.setPaused(False)
+            self.info.set_source_type(BOX_PLAY_STATE_APP)
+            self.info.set_channel(None)
+            self.info.set_channel_title(appsState["appName"])
+            self.info.set_title(appsState["appName"])
+            self.info.set_image(logoPath)
+            self.info.set_paused(False)
 
         if self._change_callback:
             _logger.debug(f"Callback called from box {self.box_id}")
@@ -235,11 +240,11 @@ class ArrisDCX960Box:
     def _set_unknown_channel_info(self):
         """Set unknown channel info."""
         _logger.warning("Couldn't set channel. Channel info set to unknown...")
-        self.info.setSourceType(BOX_PLAY_STATE_CHANNEL)
-        self.info.setChannel(None)
-        self.info.setTitle("No information available")
-        self.info.setImage(None)
-        self.info.setPaused(False)
+        self.info.set_source_type(BOX_PLAY_STATE_CHANNEL)
+        self.info.set_channel(None)
+        self.info.set_title("No information available")
+        self.info.set_image(None)
+        self.info.set_paused(False)
 
     def _get_listing_title(self, listing_content):
         """Get listing title."""
@@ -315,22 +320,22 @@ class ArrisDCX960Box:
             + key
             + '","eventType":"keyDownUp"}}'
         )
-        self.mqttClient.publish(self._householdId + "/" + self.box_id, payload)
+        self.mqtt_client.publish(self._householdId + "/" + self.box_id, payload)
 
-    def set_channel(self, serviceId):
+    def set_channel(self, service_id):
         """Set channel."""
         payload = (
             '{"id":"'
             + make_id(8)
             + '","type":"CPE.pushToTV","source":{"clientId":"'
-            + self.mqttClientId
+            + self.mqtt_client_id
             + '","friendlyDeviceName":"Home Assistant"},'
             + '"status":{"sourceType":"linear","source":{"channelId":"'
-            + serviceId
+            + service_id
             + '"},"relativePosition":0,"speed":1}}'
         )
 
-        self.mqttClient.publish(self._householdId + "/" + self.box_id, payload)
+        self.mqtt_client.publish(self._householdId + "/" + self.box_id, payload)
 
     def play_recording(self, recordingId):
         """Play recording."""
@@ -338,14 +343,14 @@ class ArrisDCX960Box:
             '{"id":"'
             + make_id(8)
             + '","type":"CPE.pushToTV","source":{"clientId":"'
-            + self.mqttClientId
+            + self.mqtt_client_id
             + '","friendlyDeviceName":"Home Assistant"},'
             + '"status":{"sourceType":"nDVR","source":{"recordingId":"'
             + recordingId
             + '"},"relativePosition":0}}'
         )
 
-        self.mqttClient.publish(self._householdId + "/" + self.box_id, payload)
+        self.mqtt_client.publish(self._householdId + "/" + self.box_id, payload)
 
     def turn_off(self):
         """Turn off."""

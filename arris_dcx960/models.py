@@ -21,62 +21,63 @@ class ArrisDCX960Session:
 class ArrisDCX960PlayingInfo:
     """Represent current state of a box."""
 
-    channelId: str
+    channel_id: str
     title: str
     image: str
-    sourceType: str
+    source_type: str
     paused: bool
+    channel_title: str
 
     def __init__(self):
         """Initialize the playing info."""
-        self.channelId = None
+        self.channel_id = None
         self.title = None
         self.image = None
-        self.sourceType = None
+        self.source_type = None
         self.paused = False
-        self.channelTitle = None
+        self.channel_title = None
 
-    def setPaused(self, paused: bool):
+    def set_paused(self, paused: bool):
         """Set pause state."""
         self.paused = paused
 
-    def setChannel(self, channelId):
+    def set_channel(self, channel_id):
         """Set channel."""
-        self.channelId = channelId
+        self.channel_id = channel_id
 
-    def setTitle(self, title):
+    def set_title(self, title):
         """Set title."""
         self.title = title
 
-    def setChannelTitle(self, title):
+    def set_channel_title(self, title):
         """Set channel title."""
-        self.channelTitle = title
+        self.channel_title = title
 
-    def setImage(self, image):
+    def set_image(self, image):
         """Set image."""
         self.image = image
 
-    def setSourceType(self, sourceType):
+    def set_source_type(self, source_type):
         """Set sourfce type."""
-        self.sourceType = sourceType
+        self.source_type = source_type
 
 
 class ArrisDCX960Channel:
     """Represent a channel."""
 
-    serviceId: str
+    service_id: str
     title: str
-    streamImage: str
-    logoImage: str
-    channelNumber: str
+    stream_image: str
+    logo_image: str
+    channel_number: str
 
-    def __init__(self, serviceId, title, streamImage, logoImage, channelNumber):
+    def __init__(self, service_id, title, stream_image, logo_image, channel_number):
         """Initialize a channel."""
-        self.serviceId = serviceId
+        self.service_id = service_id
         self.title = title
-        self.streamImage = streamImage
-        self.logoImage = logoImage
-        self.channelNumber = channelNumber
+        self.stream_image = stream_image
+        self.logo_image = logo_image
+        self.channel_number = channel_number
 
 
 class ArrisDCX960RecordingSingle:
