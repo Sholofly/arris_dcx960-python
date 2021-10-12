@@ -53,12 +53,13 @@ class ArrisDCX960:
         self._country_code = country_code
         self.channels = {}
         self.country_config = COUNTRY_SETTINGS[self._country_code]
-        self.baseUrl = self.country_config["api_url"]
-        self._api_url_session = self.baseUrl + "/session"
-        self._api_url_token = self.baseUrl + "/tokens/jwt"
-        self._api_url_channels = self.baseUrl + "/channels"
-        self._api_url_recordings = self.baseUrl + "/networkdvrrecordings"
-        self._api_url_authorization = self.baseUrl + "/authorization"
+        self._mqtt_client_connected = False
+        self._base_url = self.country_config["api_url"]
+        self._api_url_session = self._base_url + "/session"
+        self._api_url_token = self._base_url + "/tokens/jwt"
+        self._api_url_channels = self._base_url + "/channels"
+        self._api_url_recordings = self._base_url + "/networkdvrrecordings"
+        self._api_url_authorization = self._base_url + "/authorization"
         self._last_message_stamp = None
 
     def get_session_and_token(self):
@@ -78,8 +79,8 @@ class ArrisDCX960:
         payload = {"username": self.username, "password": self.password}
         try:
             response = requests.post(self._api_url_session, json=payload)
-        except (Exception):
-            raise ArrisDCX960ConnectionError("Unknown connection failure")
+        except Exception as ex:
+            raise ArrisDCX960ConnectionError("Unknown connection failure") from ex
 
         if not response.ok:
             status = response.json()
@@ -103,7 +104,7 @@ class ArrisDCX960:
             # get authentication details
             session = requests.Session()
             _logger.debug(
-                "STEP 1: Get authorization details from " + self._api_url_authorization
+                f"STEP 1: Get authorization details from {self._api_url_authorization}"
             )
             response = session.get(self._api_url_authorization)
             _logger.debug("STEP 1 - Response text:  " + str(response.text))
@@ -275,12 +276,13 @@ class ArrisDCX960:
         if resultCode == 0:
             client.on_message = self._on_mqtt_client_message
             _logger.debug("Connected to mqtt client.")
-            self.mqtt_clientConnected = True
+            self._mqtt_client_connected = True
             client.subscribe(self.session.householdId)
+            client.subscribe(self.session.householdId + "/#")
             client.subscribe(self.session.householdId + "/" + self.mqtt_client_id)
             client.subscribe(self.session.householdId + "/+/status")
-            client.subscribe(self.session.householdId + "/+/localRecordings")
-            client.subscribe(self.session.householdId + "/+/localRecordings/capacity")
+            client.subscribe(self.session.householdId + "/+/networkRecordings")
+            client.subscribe(self.session.householdId + "/+/networkRecordings/capacity")
             client.subscribe(self.session.householdId + "/watchlistService")
             client.subscribe(self.session.householdId + "/purchaseService")
             client.subscribe(self.session.householdId + "/personalizationService")
@@ -302,7 +304,7 @@ class ArrisDCX960:
     def _on_mqtt_client_disconnect(self, client, userdata, resultCode):
         """Set state to diconnect."""
         _logger.debug(f"Disconnected from mqtt client: {resultCode}")
-        self.mqtt_clientConnected = False
+        self._mqtt_client_connected = False
 
     def _on_mqtt_client_message(self, client, userdata, message):
         """Handle messages received by mqtt client."""
@@ -587,6 +589,6 @@ class ArrisDCX960:
 
     def disconnect(self):
         """Disconnect."""
-        if not self.mqtt_clientConnected:
+        if not self._mqtt_client_connected:
             return
         self.mqtt_client.disconnect()

@@ -48,7 +48,6 @@ class ArrisDCX960Box:
         self._householdId = householdId
         self._token = token
         self.info = ArrisDCX960PlayingInfo()
-        self._mqtt_clientConnected = False
         self._createUrls(country_code)
         self.mqtt_client_id = client_id
         self.mqtt_client = mqtt_client
