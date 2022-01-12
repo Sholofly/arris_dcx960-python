@@ -257,7 +257,7 @@ class ArrisDCX960:
     def _register_settop_boxes(self):
         """Get settopxes."""
         jsonResult = self._do_api_call(self._api_url_settop_boxes)
-        supported_platforms = ["EOS", "EOS2", "HORIZON"]
+        supported_platforms = ["EOS", "EOS2", "HORIZON", "APOLLO"]
         for box in jsonResult:
             if box["platformType"] in supported_platforms:
                 box_id = box["deviceId"]
