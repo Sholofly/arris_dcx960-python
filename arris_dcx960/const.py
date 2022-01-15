@@ -52,12 +52,12 @@ COUNTRY_SETTINGS = {
             },
             {
                 "channelId": "NL_000194_019352",
-                "channelName": "NPO Start",
+                "channelName": "NPO",
                 "channelNumber": "152"
             },
             {
                 "channelId": "NL_000199_019356",
-                "channelName": "Prime video",
+                "channelName": "Prime Video",
                 "channelNumber": "153"
             }
         ],
