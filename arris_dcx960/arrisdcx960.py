@@ -61,6 +61,7 @@ class ArrisDCX960:
         self._api_url_recordings = self._base_url + "/networkdvrrecordings"
         self._api_url_authorization = self._base_url + "/authorization"
         self._last_message_stamp = None
+        self.recording_capacity = None
 
     def get_session_and_token(self):
         """Get session and token from ArrisDCX960."""
@@ -360,6 +361,7 @@ class ArrisDCX960:
         self.mqtt_client.connect(self._mqtt_broker, DEFAULT_PORT)
         self._register_settop_boxes()
         self._init_channel_list()
+        self.get_recording_capacity()
         self.mqtt_client.loop_start()
 
     def _init_mqtt_client(self, logging: bool):
@@ -461,6 +463,17 @@ class ArrisDCX960:
         url = f"{self._api_url_channels}/{channel_id}"
         content = self._do_api_call(url)
         return self._create_channel(content)
+    
+    def get_recording_capacity(self):
+        """Returns remaining recording capacity"""
+        try:
+            url = f"{self._api_url_recordings}/quota"
+            content = self._do_api_call(url)
+            capacity =  (content["occupied"] / content["quota"]) * 100
+            self.recording_capacity = round(capacity)
+            return self.recording_capacity
+        except:
+            return None
 
     def _create_channel(self, channel_data):
         """Create new channel entity."""
